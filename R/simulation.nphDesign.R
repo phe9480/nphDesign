@@ -76,6 +76,9 @@
 #'                  The underlying distribution for nphDesign object must be piecewise exponential distribution for each arm.
 #'                  If nphDesign object is provided, the other parameters are ignored.
 #' @param H0 "Y" or "N" to indicate whether the simulation is for type I error
+#' @param save.data True/False indicator. Save and export the simulated data if true.
+#' @param parallelization True/False indicator. If true, use parallel computing weighted log-rank test for each analysis in strategy m
+#' @param n.cores This will be used if parallelization is TRUE. Default is 10.
 #'                  
 #' @return An object with a dataframe for each analysis including the following variables:
 #' \describe{
@@ -144,7 +147,11 @@
 simulation.nphDesign = function(nSim=10000, N = 672, A = 21, w=1.5, r=1, lambda0=log(2)/11.7, lambda1=log(2)/11.7*0.745, 
     cuts=NULL, dropOff0=0, dropOff1=0, targetEvents = c(290, 397, 496), 
     sf = "LDOF", overall.alpha = 0.025, side = 1, alpha = NULL,
-    logrank="N", fws.options=NULL, H0 = "N", nphDesign = NULL) {
+    logrank="N", fws.options=NULL, H0 = "N", nphDesign = NULL, 
+    save.data=F, parallelization=F, n.cores = 10) {
+  
+  ### create a big list saving simulated data
+  sim.data<-vector("list",length=nSim)
 
   ##############
   #Extract the setting parameters from nphDesign object if provided
@@ -179,7 +186,7 @@ simulation.nphDesign = function(nSim=10000, N = 672, A = 21, w=1.5, r=1, lambda0
     }
     ld.pk = function(s){overall.alpha * log(1 + (exp(1)-1)*s)}
     
-    
+    # https://rdrr.io/rforge/gsDesign/src/R/gsSpending.R LDPK added based on the reference code
     if (sf == "LDOF"){
       gs.alpha = ld.obf(s = timing)
     }
@@ -195,54 +202,101 @@ simulation.nphDesign = function(nSim=10000, N = 672, A = 21, w=1.5, r=1, lambda0
   wlr.sim = array(NA, dim=c(nSim, M, K, 5))
   if (logrank == "Y") {lr.sim = array(NA, dim=c(nSim, K, 5))}
   
-  for (i in 1:nSim) {
-    #(1). Generate data
-    dati = sim.pwexp(nSim=1, N = N, A = A, w=w, r=r, lambda0=lambda0, lambda1=lambda1, 
-              cuts=cuts, dropOff0=dropOff0, dropOff1=dropOff1, targetEvents = targetEvents)
-    #(2). Add group variable
-    for (j in 1:K) {
-      dati[[j]]$group = as.numeric(dati[[j]]$treatment == "experimental")
-    }  
+  if(parallelization){
+    ##############
+    #Run wlr test in parallel
+    ##############
+    library(parallel)   #For PSOCK parallel backend
+    library(foreach)    #For 'foreach' loop
+    library(doParallel) #For using PSOCK cluster with operator '%dopar%'
+    n.cores <- n.cores
+    my.cluster <- makeCluster(
+      n.cores, 
+      type = "PSOCK"
+    )
+    clusterEvalQ(my.cluster, .libPaths(.libPaths())
+    )
+    registerDoParallel(cl = my.cluster)
+    clusterEvalQ(my.cluster, library(nphDesign))
+    for (i in 1:nSim) {
+      #(1). Generate data
+      dati = sim.pwexp(nSim=1, N = N, A = A, w=w, r=r, lambda0=lambda0, lambda1=lambda1, 
+                       cuts=cuts, dropOff0=dropOff0, dropOff1=dropOff1, targetEvents = targetEvents)
+      #(2). Add group variable
+      for (j in 1:K) {
+        dati[[j]]$group = as.numeric(dati[[j]]$treatment == "experimental")
+      }  
+      sim.data[[i]]<-dati
+    }
     
     #(3). Testing strategy m
     for (m in 1:M){    
       #Perform weighted log-rank test for each analysis in strategy m
-      wlri = wlr.inference(datasets=dati, alpha = alpha, side = side, f.ws=fws.options[[m]])$test.results
-      wlri = wlri[!duplicated(wlri$analysis),]
-      wlri$result = as.numeric(wlri$inference=="Positive")
-      wlr.sim[i, m, , ] = as.matrix(wlri[,c(2,3,5,6,8)])
-    }
-    
-    #(4). Standard log-rank test for all analyses if requested
-    if (logrank=="Y"){
-      if(K > 1){
-      #GSD boundary for each analysis
-        if(side == 1) {
-           z.bd <- gsDesign::gsDesign(k=K,  alpha=overall.alpha,timing=timing[1:(K-1)], 
-                         sfu=gsDesign::sfLDOF)$upper$bound 
-        } else{
-          z.bd <- gsDesign::gsDesign(k=K,  alpha=overall.alpha/2,timing=timing[1:(K-1)], 
-                                     sfu=gsDesign::sfLDOF)$upper$bound 
-        }
-      } else {
-        if(side == 1) {z.bd = qnorm(1-overall.alpha)} else{z.bd = qnorm(1-overall.alpha/2)}
+      ## This next line takes a long-time to compute, making simulation difficult. Use parallel computing instead
+      wlr <- foreach(i = 1:nSim) %dopar% {
+        wlr.inference(datasets=sim.data[[i]], alpha = alpha, side = side, f.ws=fws.options[[m]])$test.results
       }
-      for (j in 1:K){
-        lr.test = survival::survdiff(survival::Surv(survTimeCut, 1-cnsrCut) ~ group, data = dati[[j]])
-        
-        #convert to z value in correct direction: z>0 means better experimental arm.
-        better = as.numeric(lr.test$obs[1] > lr.test$obs[2])
-        sign = 2*better - 1
-        z = sqrt(lr.test$chisq) * sign
-        
-        #count power
-        lr.sim[i, j, 1] = z
-        if (side == 1){ p = 1 - pnorm(z)} else {p = 2*(1 - pnorm(z))}
-        
-        lr.sim[i, j, 2] = p
-        lr.sim[i, j, 3] = j
-        lr.sim[i, j, 4] = z.bd[j]
-        lr.sim[i, j, 5] = as.numeric(z > z.bd[j])
+      stopCluster(cl = my.cluster) ## Stop cluster
+      for (i in 1:nSim) {
+        wlri = wlr[[i]][!duplicated(wlr[[i]]$analysis),]
+        wlri$result = as.numeric(wlri$inference=="Positive")
+        wlr.sim[i, m, , ] = as.matrix(wlri[,c(2,3,5,6,8)])
+      }
+    }    
+  }else{
+    for (i in 1:nSim) {
+      #(1). Generate data
+      dati = sim.pwexp(nSim=1, N = N, A = A, w=w, r=r, lambda0=lambda0, lambda1=lambda1, 
+                       cuts=cuts, dropOff0=dropOff0, dropOff1=dropOff1, targetEvents = targetEvents)
+      #(2). Add group variable
+      for (j in 1:K) {
+        dati[[j]]$group = as.numeric(dati[[j]]$treatment == "experimental")
+      }  
+      
+      if(save.data){
+        sim.data[[i]]<-dati
+      }
+      
+      #(3). Testing strategy m
+      for (m in 1:M){    
+        #Perform weighted log-rank test for each analysis in strategy m
+        wlri = wlr.inference(datasets=dati, alpha = alpha, side = side, f.ws=fws.options[[m]])$test.results
+        wlri = wlri[!duplicated(wlri$analysis),]
+        wlri$result = as.numeric(wlri$inference=="Positive")
+        wlr.sim[i, m, , ] = as.matrix(wlri[,c(2,3,5,6,8)])
+      }
+      
+      #(4). Standard log-rank test for all analyses if requested
+      if (logrank=="Y"){
+        if(K > 1){
+          #GSD boundary for each analysis
+          if(side == 1) {
+            z.bd <- gsDesign::gsDesign(k=K,  alpha=overall.alpha,timing=timing[1:(K-1)], 
+                                       sfu=gsDesign::sfLDOF)$upper$bound 
+          } else{
+            z.bd <- gsDesign::gsDesign(k=K,  alpha=overall.alpha/2,timing=timing[1:(K-1)], 
+                                       sfu=gsDesign::sfLDOF)$upper$bound 
+          }
+        } else {
+          if(side == 1) {z.bd = qnorm(1-overall.alpha)} else{z.bd = qnorm(1-overall.alpha/2)}
+        }
+        for (j in 1:K){
+          lr.test = survival::survdiff(survival::Surv(survTimeCut, 1-cnsrCut) ~ group, data = dati[[j]])
+          
+          #convert to z value in correct direction: z>0 means better experimental arm.
+          better = as.numeric(lr.test$obs[1] > lr.test$obs[2])
+          sign = 2*better - 1
+          z = sqrt(lr.test$chisq) * sign
+          
+          #count power
+          lr.sim[i, j, 1] = z
+          if (side == 1){ p = 1 - pnorm(z)} else {p = 2*(1 - pnorm(z))}
+          
+          lr.sim[i, j, 2] = p
+          lr.sim[i, j, 3] = j
+          lr.sim[i, j, 4] = z.bd[j]
+          lr.sim[i, j, 5] = as.numeric(z > z.bd[j])
+        }
       }
     }
   }
@@ -270,6 +324,9 @@ simulation.nphDesign = function(nSim=10000, N = 672, A = 21, w=1.5, r=1, lambda0
     o$lr.overall.power = lr.overall.pow
     o$lr.power = lr.pow
     o$lr.simulations = lr.sim
+  }
+  if(save.data){
+    o$sim.data = sim.data
   }
   return(o)
 }
