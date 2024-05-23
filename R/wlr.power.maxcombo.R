@@ -538,8 +538,8 @@ wlr.power.maxcombo = function(T = c(24, 36, 48), events = NULL,
   f.m0 = function(t){S0(t) - 0.5}
   f.m1 = function(t){S1(t) - 0.5}
   
-  m0 = uniroot(f.m0, interval= c(1, 100), tol = 1e-8)$root
-  m1 = uniroot(f.m1, interval= c(1, 100), tol = 1e-8)$root
+  m0 = uniroot(f.m0, interval= c(1, 1000), tol = 1e-8)$root
+  m1 = uniroot(f.m1, interval= c(1, 1000), tol = 1e-8)$root
 
   all.events = data.frame(cbind(events0, events1, events))
   
