@@ -8,7 +8,11 @@
 #'  
 #' @param T     Analysis time (DCO). If there are multiple analyses, then T is a vector.
 #' @param dist  An object that includes distributions of two arms in the design assumptions
-#' @param accr  Accrual distribution specifications
+#' @param accr  A list including accrual distribution specifications. Either power law or user-defined accrual function is supported.
+#'              If using power law, the accrual duration A and weight parameter xi need to be specified, which corresponds 
+#'              to the accrual function F.entry = function(t){(t/A)^xi*as.numeric(t <= A) + as.numeric(t > A)}
+#'              If using self-defined accrual function directly for complex accrual patterns, then F.entry needs to be provided.
+#'              G.ltfu is an optional user-customized dropout function. The default is for no dropout with G.ltfu=function(t){0}.
 #' @param size  Target sample size
 #' @param alphabeta   Type I and type II errors
 #' @param title Annotation of the design option
@@ -102,11 +106,35 @@ finalize.nphDesign = function(T=c(29, 45.5), n=300, r=1, dist=dist, accr=accr, a
     }
   }
   
-  #Construct accrual functions
-  A = accr$A; xi = accr$xi; LTFU = accr$LTFU
-  F.entry = function(t){(t/A)^xi*as.numeric(t <= A) + as.numeric(t > A)}
-  G.ltfu = function(t){0}
-
+  # Construct accrual functions
+  # FZ 05/07/2024
+  # if the accrual duration A and accrual power xi are provided (xi=1 if not specified), then F.entry will be defined
+  # if F.entry is provided instead A and xi, then use F.entry directly
+  # if neither A (with xi) nor F.entry is defined, then warning message will be returned.
+  if(!is.null(accr$A) & is.null(accr$F.entry)){
+    if(!is.null(accr$xi)){
+      A = accr$A; xi = accr$xi; 
+    }else{
+      warning("The accrual power parameter xi is not defined. The default value xi=1 will be used.")
+      xi = 1
+    }
+    F.entry = function(t){(t/A)^xi*as.numeric(t <= A) + as.numeric(t > A)}
+  }else if(is.null(accr$A) & !is.null(accr$F.entry)){
+    F.entry = accr$F.entry
+  }else if(is.null(accr$A) & is.null(accr$F.entry)){
+    warning("A accrual list should be defined.")
+  }else if(!is.null(accr$A) & !is.null(accr$F.entry)){
+    warning("Both power law accrual format (A, xi) and customized accrual function (F.entry) are provided. 
+             F.entry will be prioritized for use.")
+    F.entry = accr$F.entry
+  }
+  
+  if(is.null(accr$G.ltfu)){
+    G.ltfu = function(t){0}
+  }else{
+    G.ltfu = accr$G.ltfu
+  }
+  
   alpha = alphabeta$alpha; side = alphabeta$side
   overall.alpha = alphabeta$overall.alpha; 
 
@@ -120,12 +148,12 @@ finalize.nphDesign = function(T=c(29, 45.5), n=300, r=1, dist=dist, accr=accr, a
       return(a)
     }
     ld.pk = function(s){overall.alpha * log(1 + (exp(1)-1)*s)}
-  
+    ld.gamma<-function(s,param=-2){overall.alpha * (1-exp(-s*param))/(1-exp(-param))}
     #allocate alpha based on proportional of events, pseudo information
     nE = rep(NA, K)
     for (j in 1:K){
       nE[j] = f.nEvents(T = T[j], r = r, h0 = h0, S0 = S0, h1 = h1, S1 = S1, 
-              F.entry = F.entry, G.ltfu = G.ltfu, n = n)$n.events$n.events.total
+                        F.entry = F.entry, G.ltfu = G.ltfu, n = n)$n.events$n.events.total
     }
     timing = nE/nE[K]
     
@@ -134,6 +162,9 @@ finalize.nphDesign = function(T=c(29, 45.5), n=300, r=1, dist=dist, accr=accr, a
     }
     if (alphabeta$sf$type == "LDPK") {
       gs.alpha = ld.pk(s = timing)
+    }
+    if (alphabeta$sf$type == "GAMMA") {
+      gs.alpha = ld.gamma(s = timing,param=alphabeta$sf$param)
     }
     if (K == 1){alpha = overall.alpha} else{
       alpha[1] = gs.alpha[1]
