@@ -1,4 +1,4 @@
-#' Max-combo Test (Stratified) At A Single Time Point
+#' Stratified Max-combo Test At A Single Time Point
 #' 
 #' Max-combo is a class of multiple combination tests. This function considers
 #' the maximum of multiple weighted log-rank tests, i.e. z_maxcombo = max(z1, z2, ..., zk),
@@ -6,13 +6,13 @@
 #' This function calculates the p-value and associated statistics when performing
 #' the max-combo test. The weight function wi can be the flexible Stabilized 
 #' Fleming-Harrington class sFH(rho, gamma, tau, s.tau), or any user-defined 
-#' weight function. 
+#' weight function. Refer to wlr function for instructions how to set weight parameters.
 #' 
 #' Refer to Karrinson (2016) for the method of max-combo when 
 #' it is defined based on FH(0, 0), FH(1, 0), FH(0, 1) and FH(1, 1). However, 
 #' this function extends the concept to include any type of weighted log-rank tests.
 #' The kth weighted log-rank test has parameters of (rho_k, gamma_k, tau_k, s.tau_k)
-#' defined in the stabilized Fleming-Harrington class (He et al 2021) or user-defined 
+#' defined in the stabilized Fleming-Harrington class or user-defined 
 #' weight function f.ws_k based on pooled survival curve, for k = 1, ..., K. 
 #' For the stabilized Fleming-Harrington class, specify either tau or s.tau, 
 #' which are thresholds in survival time and survival rate, respectively. In addition,
