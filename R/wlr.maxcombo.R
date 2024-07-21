@@ -6,7 +6,8 @@
 #' This function calculates the p-value and associated statistics when performing
 #' the max-combo test. The weight function wi can be the flexible Stabilized 
 #' Fleming-Harrington class sFH(rho, gamma, tau, s.tau), or any user-defined 
-#' weight function. Refer to wlr function for instructions how to set weight parameters.
+#' weight function. Refer to wlr function for instructions how to set weight parameters. 
+#' For weighted logrank test with multiple analyses, use wlr.inference function.
 #' 
 #' Refer to Karrinson (2016) for the method of max-combo when 
 #' it is defined based on FH(0, 0), FH(1, 0), FH(0, 1) and FH(1, 1). However, 
