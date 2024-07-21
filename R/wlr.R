@@ -96,7 +96,27 @@
 #' wlr(time=c(12,7,10,5,12,15,20,20), event=c(1,0,0,1,1,0,1,1), group=c(1,1,0,0,0,1,0,1), rho=0, gamma=1, tau = 10, s.tau=0.5, side="one.sided")
 #' wlr(time=c(12,7,10,5,12,15,20,20), event=c(1,0,0,1,1,0,1,1), group=c(1,1,0,0,0,1,0,1), rho=0, gamma=0, tau = 10, s.tau=0.5, side="one.sided")
 #' wlr(time=c(12,7,10,5,12,15,20,20), event=c(1,0,0,1,1,0,1,1), group=c(1,1,0,0,0,1,0,1), rho=0, gamma=0, tau = 10, s.tau=0, side="one.sided")
+#' t = rexp(100); e = sample(c(0,1), 100, replace = TRUE); g = c(rep(0, 50), rep(1, 50)); str1 = sample(c(1,2), 100, replace = TRUE)
+#' #FH(0, 1); s.tau = 0 means no threshold, so reduces to FH(0, 1)
+#' wlr(time=t, event=e, group=g, rho=0, gamma=1, tau = NULL, s.tau=0, strata1=str1)
 #' 
+#' #FH(0, 1); when tau = Inf, so reduces to FH(0, 1)
+#' wlr(time=t, event=e, group=g, rho=0, gamma=1, tau = Inf, s.tau=NULL, strata1=str1)
+#' 
+#' #FH(0, 1, tau=2)
+#' wlr(time=t, event=e, group=g, rho=0, gamma=1, tau = 2, s.tau=NULL, strata1=str1)
+#' 
+#' #FH(0, 1, s.tau=0.5)
+#' wlr(time=t, event=e, group=g, rho=0, gamma=1, tau = NULL, s.tau=0.5, strata1=str1)
+#' 
+#' #FH(0, 1, s.tau=0.5); tau is ignored if s.tau is available.
+#' wlr(time=t, event=e, group=g, rho=0, gamma=1, tau = 2, s.tau=0.5, strata1=str1)
+#' 
+#' #logrank test; s.tau set as 0 but it is actually not used in calculation.
+#' wlr(time=t, event=e, group=g, rho=0, gamma=0, tau = NULL, s.tau=0, strata1=str1)
+#' 
+#' #logrank test; s.tau value doesn't make any difference, because it is actually not used in calculation.
+#' wlr(time=t, event=e, group=g, rho=0, gamma=0, tau = NULL, s.tau=0.5, strata1=str1)
 #' @export
 #' 
 wlr = function(time=c(5,7,10,12,12,15,20,20), event=c(1,0,0,1,1,0,1,1),
