@@ -1,10 +1,12 @@
 #' Stratified Weighted Log-rank Test
 #' 
-#' The weight function includes Stabilized Fleming-Harrington class (rho, gamma, tau, s.tau),
-#' and any user-defined weight function. For the stabilized Fleming-Harrington class,
-#' to produce stabilized weighting function from pooled survival curve, specify either 
-#' tau or s.tau, which are thresholds in survival time and survival rate, respectively. 
-#' The weight function is based on the pooled survival curve within each strata by default.
+#' It implements (1) Fleming-Harrington test (rho, gamma); (2) its truncated version with parameters (rho, gamma, tau, s.tau), 
+#' where tau and s.tau are thresholds such that the weight is s.tilda^rho*(1-s.tilda)^gamma, where s.tilda = max(s, s.tau). 
+#' If s.tau is not provided but tau is provided, then calculate s.tau = S(tau). 
+#' (3) any user-defined weight function of survival rate f.ws(s), for example f.ws = function(s){1/max(0.6, s^2)}. 
+#' The weight function is based on the pooled survival curve within each strata by default. The priority to determine 
+#' the weight is f.ws >>> s.tau >>> tau. When tau is infinity or s.tau is 0, it reduces to the Fleming-Harrinton 
+#' test (rho, gamma).
 #' 
 #' @param  time  Survival time
 #' @param  event Event indicator; 1 = event, 0 = censor
