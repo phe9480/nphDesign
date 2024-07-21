@@ -28,7 +28,7 @@
 #'       function defined as w(t) = s_tilda^rho*(1-s_tilda)^gamma, where
 #'       s_tilda = max(s(t), s.tau) or max(s(t), s(tau)) if s.tau = NULL
 #'       tau = Inf reduces to regular Fleming-Harrington test(rho, gamma)
-#' @param  s.tau  A vector of survival rate cuts S(tau) at t = tau; default 0.5, ie. cut at median.
+#' @param  s.tau  A vector of survival rate cuts S(tau) at t = tau; default 0.
 #'       s.tau = 0 reduces to regular Fleming-Harrington test(rho, gamma)
 #'       
 #' @param  f.ws  Self-defined weight functions of survival rate. 
@@ -133,7 +133,7 @@
 #' @export
 wlr.maxcombo = function(time=c(5,7,10,12,12,15,20,20), event=c(1,0,0,1,1,0,1,1),
     group=c(0,1,0,1,0,1,0,1), strata1=NULL, strata2=NULL, strata3=NULL, 
-    rho = c(0,0,0), gamma=c(0,0.5,1), tau = NULL, s.tau=c(0, 0, 0.5),
+    rho = c(0,0,0), gamma=c(0,0.5,1), tau = NULL, s.tau=c(0, 0, 0),
     f.ws=list(
       lr = function(s){return(1)}, 
       fh005=function(s){sqrt(1-s)},
