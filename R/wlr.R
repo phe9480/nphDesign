@@ -1,12 +1,14 @@
 #' Stratified Weighted Log-rank Test
 #' 
-#' It implements (1) Fleming-Harrington test (rho, gamma); (2) its truncated version with parameters (rho, gamma, tau, s.tau), 
-#' where tau and s.tau are thresholds such that the weight is s.tilda^rho*(1-s.tilda)^gamma, where s.tilda = max(s, s.tau). 
-#' If s.tau is not provided but tau is provided, then calculate s.tau = S(tau). 
-#' (3) any user-defined weight function of survival rate f.ws(s), for example f.ws = function(s){1/max(0.6, s^2)}. 
-#' The weight function is based on the pooled survival curve within each strata by default. The priority to determine 
-#' the weight is f.ws >>> s.tau >>> tau. When tau is infinity or s.tau is 0, it reduces to the Fleming-Harrinton 
-#' test (rho, gamma).
+#' It implements (1) Fleming-Harrington test (rho, gamma), (2) its truncated version 
+#' with parameters (rho, gamma, tau, s.tau), where tau and s.tau are thresholds 
+#' such that the weight is s.tilda^rho*(1-s.tilda)^gamma, where 
+#' s.tilda = max(s, s.tau). If s.tau is not provided but tau is provided, 
+#' then calculate s.tau = S(tau). (3) any user-defined weight function of 
+#' survival rate f.ws(s), for example f.ws = function(s){1/max(0.6, s^2)}. 
+#' The weight function is based on the pooled survival curve within each strata by default. 
+#' The priority to determine the weight is f.ws >> s.tau >> tau. When tau is 
+#' infinity or s.tau is 0, it reduces to the Fleming-Harrinton test (rho, gamma).
 #' 
 #' @param  time  Survival time
 #' @param  event Event indicator; 1 = event, 0 = censor
@@ -18,7 +20,7 @@
 #'       function defined as w(t) = s_tilda^rho*(1-s_tilda)^gamma, where
 #'       s_tilda = max(s(t), s.tau) or max(s(t), s(tau)) if s.tau = NULL
 #'       tau = Inf reduces to regular Fleming-Harrington test(rho, gamma)
-#' @param  s.tau  Survival rate cut S(tau) at t = tau; default 0.
+#' @param  s.tau  Survival rate cut S(tau) at t = tau; default 0.5, ie. cut at median.
 #'       s.tau = 0 reduces to regular Fleming-Harrington test(rho, gamma)
 #' @param  f.ws  Self-defined weight function of survival rate. 
 #'         For example, f.ws = function(s){1/max(s, 0.25)}
@@ -98,8 +100,10 @@
 #' wlr(time=c(12,7,10,5,12,15,20,20), event=c(1,0,0,1,1,0,1,1), group=c(1,1,0,0,0,1,0,1), rho=0, gamma=1, tau = 10, s.tau=0.5, side="one.sided")
 #' wlr(time=c(12,7,10,5,12,15,20,20), event=c(1,0,0,1,1,0,1,1), group=c(1,1,0,0,0,1,0,1), rho=0, gamma=0, tau = 10, s.tau=0.5, side="one.sided")
 #' wlr(time=c(12,7,10,5,12,15,20,20), event=c(1,0,0,1,1,0,1,1), group=c(1,1,0,0,0,1,0,1), rho=0, gamma=0, tau = 10, s.tau=0, side="one.sided")
+#' 
 #' t = rexp(100); e = sample(c(0,1), 100, replace = TRUE); g = c(rep(0, 50), rep(1, 50)); str1 = sample(c(1,2), 100, replace = TRUE)
 #' #FH(0, 1); s.tau = 0 means no threshold, so reduces to FH(0, 1)
+#' 
 #' wlr(time=t, event=e, group=g, rho=0, gamma=1, tau = NULL, s.tau=0, strata1=str1)
 #' 
 #' #FH(0, 1); when tau = Inf, so reduces to FH(0, 1)
@@ -119,12 +123,102 @@
 #' 
 #' #logrank test; s.tau value doesn't make any difference, because it is actually not used in calculation.
 #' wlr(time=t, event=e, group=g, rho=0, gamma=0, tau = NULL, s.tau=0.5, strata1=str1)
+#' 
 #' @export
 #' 
 wlr = function(time=c(5,7,10,12,12,15,20,20), event=c(1,0,0,1,1,0,1,1),
                group=c(0,1,0,1,0,1,0,1), strata1=NULL, strata2=NULL, strata3=NULL, 
-               rho=0, gamma=1, tau = NULL, s.tau=0,
+               rho=0, gamma=1, tau = NULL, s.tau=0.5,
                f.ws=NULL, side = c("two.sided", "one.sided")) {
+  #Unstratified version
+  wlr0 = function(time=c(5,7,10,12,12,15,20,20), event=c(1,0,0,1,1,0,1,1),
+                  group=c(0,1,0,1,0,1,0,1), rho=0, gamma=1, tau = NULL, s.tau=0.5, 
+                  f.ws=NULL, side = c("two.sided", "one.sided")) {
+    
+    u.eTime = unique(time[event==1]) #vector of unique event times
+    u.Ne = length(u.eTime) #number of unique event times
+    if (u.Ne == 0) {return(NULL); stop("No events")}
+    
+    u.eTime = sort(u.eTime) #sort by increasing order of unique event times
+    
+    Y0 = Y1 = Y = dN = dN0 = dN1 = rep(NA, u.Ne) #risk-set, death-set
+    
+    for (i in 1:u.Ne) {
+      Y0[i] = sum(time>=u.eTime[i] & group == 0)
+      Y1[i] = sum(time>=u.eTime[i] & group == 1)
+      dN0[i] = sum(time == u.eTime[i] & group == 0 & event == 1)
+      dN1[i] = sum(time == u.eTime[i] & group == 1 & event == 1)
+    }
+    
+    Y=Y0+Y1
+    dN = dN0 + dN1
+    
+    s = rep(NA, u.Ne)
+    
+    s[1] = 1 - dN[1]/Y[1]
+    if (u.Ne > 1) {
+      for (i in 2:u.Ne) {
+        s[i] = s[i-1] * (1 - dN[i]/Y[i])
+      }
+    }
+    w = rep(NA, u.Ne)
+    #If f.ws() function is provided, then use directly. 
+    if(!is.null(f.ws)){
+      w[1] = f.ws(1)
+      for(i in 2:u.Ne){
+        w[i] = f.ws(s[i-1])
+        s.til=NULL
+      }
+    } else {
+      #Find S(tau): = S(max(ti)|ti <= tau), where ti is unique event time.
+      if (is.null(s.tau)) {
+        if (is.null(tau)){stop("tau or s.tau or f.ws is required for weight function.")}else{
+          s.tau = 1
+          for (i in 1:u.Ne) {
+            if (u.eTime[i] <= tau) {s.tau = s[i]} else {break}
+          }
+        }
+      } #if s.tau is missing, find s.tau by tau.
+      s.til = apply(cbind(s, s.tau),MARGIN=1,FUN=max)
+      
+      #w = s.til^rho*(1-s.til)^gamma
+      #Special handling to ensure FH00 = logrank; FH10 = wilcoxon
+      if(gamma == 0){w[1] = 1} else{w[1] = 0}
+      for (i in 2:u.Ne){w[i] = s.til[i-1]^rho*(1-s.til[i-1])^gamma}
+    }
+    
+    U=w*(dN0-Y0/Y*dN)
+    V=w^2*Y0*Y1/(Y^2)*(Y-dN)/(Y-1)*dN
+    
+    z=sum(U[!is.nan(V)])/sqrt(sum(V[!is.nan(V)]))
+    
+    if(side[1] == "one.sided") {
+      test.side = 1; p = 1-pnorm(z)
+    } else {
+      test.side = 2; p = 2*(1-pnorm(abs(z)))
+    }
+    
+    #create a dataframe to output the parameters
+    chisq = z*z
+    test.results = data.frame(cbind(z, chisq, p, test.side))
+    
+    #create a dataframe to output the list of unique event times and statistics
+    uni.event.time = data.frame(cbind(u.eTime,Y0, Y1, Y, dN0, dN1, dN, s, s.til, w, U, V, z))
+    
+    #create a dataframe to output the original data
+    data = data.frame(cbind(time, event, group))
+    
+    o=list()
+    o$uni.event.time = uni.event.time
+    #o$data = data
+    o$test.results = test.results
+    if(!is.null(f.ws)){wt = f.ws} else{
+      wt = data.frame(cbind(rho, gamma, tau, s.tau))
+    }
+    o$wt = wt
+    return(o)
+  }
+  
   #Initialize strata1-3
   n = length(time)
   if(is.null(strata1)){strata1 = rep(1,n)}
