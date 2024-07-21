@@ -144,7 +144,7 @@
 #' simulation.nphDesign(nSim=10, nphDesign = nph.object)
 #' 
 #' @export 
-simulation.nphDesign = function(nSim=10000, N = 672, A = 21, w=1.5, r=1, lambda0=log(2)/11.7, lambda1=log(2)/11.7*0.745, 
+simulation.nphDesign.pwexp = function(nSim=10000, N = 672, A = 21, w=1.5, r=1, lambda0=log(2)/11.7, lambda1=log(2)/11.7*0.745, 
     cuts=NULL, dropOff0=0, dropOff1=0, targetEvents = c(290, 397, 496), 
     sf = "LDOF", overall.alpha = 0.025, side = 1, alpha = NULL,
     logrank="N", fws.options=NULL, H0 = "N", nphDesign = NULL) {
