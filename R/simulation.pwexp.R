@@ -44,7 +44,7 @@
 #' @param DCO   A vector of data cut-off time in months, calculated from first subject in. 
 #'              Default NULL. The date cut-off times will be determined by targetEvents.
 #'              If provided, then the targetEvents will be ignored.
-#' @param seed Seed for simulating data. Default 2000.             
+#'              
 #' @return An object with a dataframe for each analysis including the following variables:
 #' \describe{
 #' \item{sim}{sequence number of simulated dataset;}
@@ -96,7 +96,7 @@
 #' plot(km.FA,xlab="Month Since Randomization",ylab="Survival",lty=1:2,xlim=c(0,36))
 #' 
 #' @export 
-simulation.pwexp = function(nSim=100, N = 600, A = 21, w=1.5, r=1, lam0=log(2)/12, lam1=log(2)/12*0.65, cuts=NULL, drop0=0, drop1=0, targetEvents = c(400, 500), DCO = NULL, seed=2000) {
+simulation.pwexp = function(nSim=100, N = 600, A = 21, w=1.5, r=1, lam0=log(2)/12, lam1=log(2)/12*0.65, cuts=NULL, drop0=0, drop1=0, targetEvents = c(400, 500), DCO = NULL) {
 
   
   f.nEachMonth = function (N=600, A=24, w=2, r=2) {
@@ -176,7 +176,8 @@ simulation.pwexp = function(nSim=100, N = 600, A = 21, w=1.5, r=1, lam0=log(2)/1
     
     #rename variables
     dataj <- dplyr::rename(dataj, enterTime = enterT, calendarTime = ct, survTime= survival)
-
+    dataj$group = as.numeric(dataj$treatment == "experimental")
+    
     #cut data according to the specified target events    
     dataj.cut <- lapply(1:L, function(k) {
       f.dataCut(data=dataj, targetEvents[k], DCO = DCO[k])
