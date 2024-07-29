@@ -28,7 +28,7 @@
 #'  weighted log-rank test statistic Z = U/sqrt(var(U)) with U as the weighted
 #'  log-rank score statistic. 
 #'  
-#' @param DCO Calendar times, calculated from first subject randomization date, 
+#' @param T  Calendar times, calculated from first subject randomization date, 
 #'           when the weighted log-rank test will be evaluated at the same calendar time. 
 #' @param r  Randomization ratio of experimental arm : control arm as r:1. When r = 1, it is equal allocation. Default r = 1.
 #' @param n Total sample size for two arms. Default is NULL. 
@@ -52,12 +52,12 @@
 #' @param  f.ws  Self-defined weight function of survival rate. 
 #'         For example, f.ws = function(s){1/max(s, 0.25)}
 #'         When f.ws is specified, the weight function takes them as priority.
-#' @param Lambda Distribution function of enrollment. For uniform enrollment, 
-#' Lambda(t) = (t/A) where A is the enrollment period, i.e., Lambda(t) = t/A for 0<=t<=A, and 
-#' Lambda(t) = 1 when t > A. For more general non-uniform enrollment with weight psi, 
-#' Lambda(t) = (t/A)^psi*I(0<=t<=A) + I(t>A). Default Lambda is uniform distribution function.
-#' @param G Distribution function of lost-to-follow-up censoring process. The observed
-#' survival time is min(survival time, lost-to-follow-up time). Default G = 0 (no lost-to-followup)
+#' @param F.entry Distribution function of enrollment. For uniform enrollment, 
+#' F.entry(t) = (t/A) where A is the enrollment period, i.e., F.entry(t) = t/A for 0<=t<=A, and 
+#' F.entry(t) = 1 when t > A. For more general non-uniform enrollment with weight psi, 
+#' F.entry(t) = (t/A)^psi*I(0<=t<=A) + I(t>A). Default F.entry is uniform distribution function.
+#' @param G.ltfu Distribution function of lost-to-follow-up censoring process. The observed
+#' survival time is min(survival time, lost-to-follow-up time). Default G.ltfu = 0 (no lost-to-followup)
 #'
 #' @return An object with dataframes below.
 #'  \itemize{
@@ -86,20 +86,20 @@
 #' lambda1 = lambda0 * HR
 #' f.logHR.PH = function(t){log(HR)}
 #' h1.PH = function(t){lambda1}; S1.PH= function(t){exp(-lambda1 * t)}
-#' Lambda = function(t){(t/18)^1.5*as.numeric(t <= 18) + as.numeric(t > 18)}
-#' rho = 0; gamma = 0; tau = NULL; s.tau = 0; f.ws = NULL; G = function(t){0}
-#' DCO = 24; r = 1; n = 450
+#' F.entry = function(t){(t/18)^1.5*as.numeric(t <= 18) + as.numeric(t > 18)}
+#' rho = 0; gamma = 0; tau = NULL; s.tau = 0; f.ws = NULL; G.ltfu = function(t){0}
+#' T = 24; r = 1; n = 450
 #' 
-#' wlr.AHR(DCO = 24, r = 1, n = 450, h0 = h0, S0=S0,
+#' wlr.AHR(T = 24, r = 1, n = 450, h0 = h0, S0=S0,
 #'      h1 = h1.PH, S1=S1.PH, f.logHR = f.logHR.PH,
 #'      rho = 0, gamma = 0, tau = NULL, s.tau = 0, f.ws = NULL,
-#'      Lambda = Lambda, G = G)
+#'      F.entry = F.entry, G.ltfu = G.ltfu)
 #'      
 #' #If proportional hazards, then the average HR is independent of any weight functions       
-#' wlr.AHR(DCO = 24, r = 1, n = 450, h0 = h0, S0=S0,
+#' wlr.AHR(T = 24, r = 1, n = 450, h0 = h0, S0=S0,
 #'      h1 = h1.PH, S1=S1.PH, f.logHR = f.logHR.PH,
 #'      rho = 0, gamma = 1, tau = NULL, s.tau = 0, f.ws = NULL,
-#'      Lambda = Lambda, G = G)
+#'      F.entry = F.entry, G.ltfu = G.ltfu)
 #'      
 #' #############      
 #' #Example (2) 
@@ -114,18 +114,18 @@
 #' c = exp(-delay*lambda0*(1-HR)); 
 #' S1.D6 = function(t){exp(-lambda0*t)*as.numeric(t<delay) + c*exp(-HR*lambda0*t)*as.numeric(t>=delay)}
 #' f.logHR.D6 = function(t){log(as.numeric(t<6) + as.numeric(t>= 6)*HR)}
-#' Lambda = function(t){(t/18)^1.5*as.numeric(t <= 18) + as.numeric(t > 18)}
-#' G = function(t){0}
+#' F.entry = function(t){(t/18)^1.5*as.numeric(t <= 18) + as.numeric(t > 18)}
+#' G.ltfu = function(t){0}
 #' 
-#' wlr.AHR(DCO = 24, r = 1, n = 450, h0 = h0, S0=S0,
+#' wlr.AHR(T = 24, r = 1, n = 450, h0 = h0, S0=S0,
 #'      h1 = h1.D6, S1=S1.D6, f.logHR = f.logHR.D6,
 #'      rho = 0, gamma = 0, tau = NULL, s.tau = 0, f.ws = NULL,
-#'      Lambda = Lambda, G = G)
+#'      F.entry = F.entry, G.ltfu = G.ltfu)
 #'      
-#' wlr.AHR(DCO = 24, r = 1, n = 450, h0 = h0, S0=S0,
+#' wlr.AHR(T = 24, r = 1, n = 450, h0 = h0, S0=S0,
 #'      h1 = h1.D6, S1=S1.D6, f.logHR = f.logHR.D6,
 #'      rho = 0, gamma = 1, tau = NULL, s.tau = 0, f.ws = NULL,
-#'      Lambda = Lambda, G = G)
+#'      F.entry = F.entry, G.ltfu = G.ltfu)
 #'      
 #' #############
 #' #Example (3). 
@@ -134,22 +134,22 @@
 #' plot.AHR = function(f.logHR = f.logHR.PH, h0=h0, S0=S0, h1=h1, S1=S1, s.tau=0.5){
 #'   maxT = 48; AHR.lr = AHR.fh = AHR.fh11 = AHR.sfh = rep(NA, maxT)
 #'   for(i in 1:maxT){
-#'     AHR.lr[i] = wlr.AHR(DCO = i, r = 1, n = 450, h0 = h0, S0=S0,
+#'     AHR.lr[i] = wlr.AHR(T = i, r = 1, n = 450, h0 = h0, S0=S0,
 #'        h1 = h1, S1=S1, f.logHR = f.logHR,
 #'        rho = 0, gamma = 0, tau = NULL, s.tau = 0, f.ws = NULL,
-#'        Lambda = Lambda, G = G)$AHR
-#'     AHR.fh[i] = wlr.AHR(DCO = i, r = 1, n = 450, h0 = h0, S0=S0,
+#'        F.entry = F.entry, G.ltfu = G.ltfu)$AHR
+#'     AHR.fh[i] = wlr.AHR(T = i, r = 1, n = 450, h0 = h0, S0=S0,
 #'        h1 = h1, S1=S1, f.logHR = f.logHR,
 #'        rho = 0, gamma = 1, tau = NULL, s.tau = 0, f.ws = NULL,
-#'        Lambda = Lambda, G = G)$AHR      
-#'     AHR.sfh[i] = wlr.AHR(DCO = i, r = 1, n = 450, h0 = h0, S0=S0,
+#'        F.entry = F.entry, G.ltfu = G.ltfu)$AHR      
+#'     AHR.sfh[i] = wlr.AHR(T = i, r = 1, n = 450, h0 = h0, S0=S0,
 #'        h1 = h1, S1=S1, f.logHR = f.logHR,
 #'        rho = 0, gamma = 1, tau = NULL, s.tau = s.tau, f.ws = NULL,
-#'        Lambda = Lambda, G = G)$AHR    
-#'     AHR.fh11[i] = wlr.AHR(DCO = i, r = 1, n = 450, h0 = h0, S0=S0,
+#'        F.entry = F.entry, G.ltfu = G.ltfu)$AHR    
+#'     AHR.fh11[i] = wlr.AHR(T = i, r = 1, n = 450, h0 = h0, S0=S0,
 #'        h1 = h1, S1=S1, f.logHR = f.logHR,
 #'        rho = 1, gamma = 1, tau = NULL, s.tau = 0, f.ws = NULL,
-#'        Lambda = Lambda, G = G)$AHR          
+#'        F.entry = F.entry, G.ltfu = G.ltfu)$AHR          
 #'   }
 #'
 #'   maxY = max(c(AHR.lr, AHR.fh, AHR.sfh))
@@ -175,7 +175,7 @@
 #' 
 #' #(c)Crossover to effective subsequent IO therapy and delay 6 months
 #' #########################
-#' crossDCO = 24; HRx = 0.9; #after crossover, assuming the tail piecewise HR = 0.9.
+#' crossT = 24; HRx = 0.9; #after crossover, assuming the tail piecewise HR = 0.9.
 #' h0x = function(t){lambda0*as.numeric(t < crossT) + HR/HRx*lambda0*as.numeric(t >= crossT)}; 
 #' c0 = exp(-crossT*lambda0*(1-HR/HRx)); 
 #' S0x = function(t){exp(-lambda0*t)*as.numeric(t<crossT) + c0*exp(-HR/HRx*lambda0*t)*as.numeric(t>=crossT)}
@@ -205,11 +205,11 @@
 #'   lr = wlr.AHR(T = 48, r = 1, n = 450, h0 = h0, S0=S0,
 #'        h1 = h1.D6, S1=S1.D6, f.logHR = f.logHR.D6,
 #'        rho = 0, gamma = 0, tau = NULL, s.tau = 0, f.ws = NULL,
-#'        Lambda = Lambda, G = G)
+#'        F.entry = F.entry, G.ltfu = G.ltfu)
 #'   fh = wlr.AHR(T = 48, r = 1, n = 450, h0 = h0, S0=S0,
 #'        h1 = h1.D6, S1=S1.D6, f.logHR = f.logHR.D6,
 #'        rho = 0, gamma = 1, tau = NULL, s.tau = 0, f.ws = NULL,
-#'        Lambda = Lambda, G = G)
+#'        F.entry = F.entry, G.ltfu = G.ltfu)
 #'   AHR.lr[i] = lr$AHR; AHR.KP.lr[i] = lr$AHR.KP
 #'   AHR.fh[i] = fh$AHR; AHR.KP.fh[i] = fh$AHR.KP
 #' }
@@ -240,11 +240,11 @@
 #'   lr = wlr.AHR(T = 48, r = 1, n = 450, h0 = h0, S0=S0,
 #'        h1 = h1.PH, S1=S1.PH, f.logHR = f.logHR.PH,
 #'        rho = 0, gamma = 0, tau = NULL, s.tau = 0, f.ws = NULL,
-#'        Lambda = Lambda, G = G)
+#'        F.entry = F.entry, G.ltfu = G.ltfu)
 #'   fh = wlr.AHR(T = 48, r = 1, n = 450, h0 = h0, S0=S0,
 #'        h1 = h1.PH, S1=S1.PH, f.logHR = f.logHR.PH,
 #'        rho = 0, gamma = 1, tau = NULL, s.tau = 0, f.ws = NULL,
-#'        Lambda = Lambda, G = G)
+#'        F.entry = F.entry, G.ltfu = G.ltfu)
 #'   AHR.lr[i] = lr$AHR; AHR.KP.lr[i] = lr$AHR.KP
 #'   AHR.fh[i] = fh$AHR; AHR.KP.fh[i] = fh$AHR.KP
 #' }
@@ -281,11 +281,11 @@
 #'   lr = wlr.AHR(T = 48, r = 1, n = 450, h0 = h0x, S0=S0x,
 #'        h1 = h1.D6x, S1=S1.D6x, f.logHR = f.logHR.D6x,
 #'        rho = 0, gamma = 0, tau = NULL, s.tau = 0, f.ws = NULL,
-#'        Lambda = Lambda, G = G)
+#'        F.entry = F.entry, G.ltfu = G.ltfu)
 #'   fh = wlr.AHR(T = 48, r = 1, n = 450, h0 = h0x, S0=S0x,
 #'        h1 = h1.D6x, S1=S1.D6x, f.logHR = f.logHR.D6x,
 #'        rho = 0, gamma = 1, tau = NULL, s.tau = 0, f.ws = NULL,
-#'        Lambda = Lambda, G = G)
+#'        F.entry = F.entry, G.ltfu = G.ltfu)
 #'   AHR.lr[i] = lr$AHR; AHR.KP.lr[i] = lr$AHR.KP
 #'   AHR.fh[i] = fh$AHR; AHR.KP.fh[i] = fh$AHR.KP
 #' }
@@ -302,13 +302,13 @@
 #' 
 #' @export
 #' 
-wlr.AHR = function(DCO = 24, r = 1, n = 450, 
+wlr.AHR = function(T = 24, r = 1, n = 450, 
        h0 = function(t){log(2)/12}, S0= function(t){exp(-log(2)/12 * t)},
        h1 = function(t){log(2)/12*0.70}, S1= function(t){exp(-log(2)/12 * 0.7 * t)}, 
        f.logHR = function(t){log(as.numeric(t<6) + as.numeric(t>= 6)*0.65)},
        rho = 0, gamma = 0, tau = NULL, s.tau = 0, f.ws = NULL,
-       Lambda = function(t){(t/18)*as.numeric(t <= 18) + as.numeric(t > 18)}, 
-       G = function(t){0}){
+       F.entry = function(t){(t/18)*as.numeric(t <= 18) + as.numeric(t > 18)}, 
+       G.ltfu = function(t){0}){
   
   #Re-parameterization as consistent with the manuscript; r1 is proportion of experimental arm subjects.
   r1 = r / (r + 1); r0 = 1 - r1 
@@ -342,14 +342,14 @@ wlr.AHR = function(DCO = 24, r = 1, n = 450,
   #eta: weighted average of HR(t) by prob. of event
   I.eta = function(t){
     w = f.w(t, f.S = S.bar, f.ws=f.ws, tau=tau, s.tau=s.tau, rho=rho, gamma=gamma)
-    return(w * f.logHR(t)*Lambda(DCO-t) * (1 - G(t)) * f.bar(t))
+    return(w * f.logHR(t)*F.entry(T-t) * (1 - G.ltfu(t)) * f.bar(t))
   }
   eta = integrate(I.eta, lower=0, upper=T, abs.tol=1e-8)$value
   
   #d: prob. of event
   I.d = function(t){
     w = f.w(t, f.S = S.bar, f.ws=f.ws, tau=tau, s.tau=s.tau, rho=rho, gamma=gamma)
-    return(w * Lambda(DCO-t) * (1 - G(t)) * f.bar(t))
+    return(w * F.entry(T-t) * (1 - G.ltfu(t)) * f.bar(t))
   }
   d = integrate(I.d, lower=0, upper=T, abs.tol=1e-8)$value
   AHR = exp(eta / d)  
@@ -358,35 +358,35 @@ wlr.AHR = function(DCO = 24, r = 1, n = 450,
   I.KP1 = function(t){
     w = f.w(t, f.S = S.bar, f.ws=f.ws, tau=tau, s.tau=s.tau, rho=rho, gamma=gamma)
     HRt = exp(f.logHR(t))
-    return(w *HRt/(1 + HRt)*Lambda(DCO-t) * (1 - G(t)) * f.bar(t))
+    return(w *HRt/(1 + HRt)*F.entry(T-t) * (1 - G.ltfu(t)) * f.bar(t))
   }
   I.KP2 = function(t){
     w = f.w(t, f.S = S.bar, f.ws=f.ws, tau=tau, s.tau=s.tau, rho=rho, gamma=gamma)
     HRt = exp(f.logHR(t))
-    return(w *1/(1 + HRt)*Lambda(DCO-t) * (1 - G(t)) * f.bar(t))
+    return(w *1/(1 + HRt)*F.entry(T-t) * (1 - G.ltfu(t)) * f.bar(t))
   }
   AHR.KP = integrate(I.KP1, lower=0, upper=T, abs.tol=1e-8)$value/integrate(I.KP2, lower=0, upper=T, abs.tol=1e-8)$value
   
   #Asymptotic variance of AHR
   I.I0 = function(t){
     w = f.w(t, f.S = S.bar, f.ws=f.ws, tau=tau, s.tau=s.tau, rho=rho, gamma=gamma)
-    return(w^2 * Lambda(DCO-t) * (1 - G(t)) * f.bar(t))
+    return(w^2 * F.entry(T-t) * (1 - G.ltfu(t)) * f.bar(t))
   }
   I0 = integrate(I.I0, lower=0, upper=T, abs.tol=1e-8)$value
 
   I.d0 = function(t){
     w = f.w(t, f.S = S.bar, f.ws=f.ws, tau=tau, s.tau=s.tau, rho=rho, gamma=gamma)
-    return(w * (exp(f.logHR(t))-1)*Lambda(DCO-t) * (1 - G(t)) * f0(t))
+    return(w * (exp(f.logHR(t))-1)*F.entry(T-t) * (1 - G.ltfu(t)) * f0(t))
   }
   d0 = integrate(I.d0, lower=0, upper=T, abs.tol=1e-8)$value
   I.d1 = function(t){
     w = f.w(t, f.S = S.bar, f.ws=f.ws, tau=tau, s.tau=s.tau, rho=rho, gamma=gamma)
-    return(w * (1-exp(-f.logHR(t)))*Lambda(DCO-t) * (1 - G(t)) * f1(t))
+    return(w * (1-exp(-f.logHR(t)))*F.entry(T-t) * (1 - G.ltfu(t)) * f1(t))
   }
   d1 = integrate(I.d1, lower=0, upper=T, abs.tol=1e-8)$value
   AHR2 = exp((r1*d1 + r0*d0)/d)
 
-  V = I0 / (n*Lambda(T)*r0*r1*d^2)
+  V = I0 / (n*F.entry(T)*r0*r1*d^2)
   
   o = list()
   o$AHR = AHR

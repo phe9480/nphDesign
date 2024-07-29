@@ -16,7 +16,7 @@
 #'       function defined as w(t) = s_tilda^rho*(1-s_tilda)^gamma, where
 #'       s_tilda = max(s(t-), s.tau) or max(s(t-), s(tau)) if s.tau = NULL
 #'       tau = Inf reduces to regular Fleming-Harrington test(rho, gamma). 
-#' @param  s.tau  Survival rate cut S(tau) at t = tau; default 0.
+#' @param  s.tau  Survival rate cut S(tau) at t = tau; default 0.5, ie. cut at median.
 #'       s.tau = 0 reduces to regular Fleming-Harrington test(rho, gamma)
 #' @param  f.ws  Self-defined weight function of survival rate. 
 #'         For example, f.ws = function(s){1/max(s, 0.25)}
@@ -90,7 +90,7 @@
 #' 
 #' 
 wlr0 = function(time=c(5,7,10,12,12,15,20,20), event=c(1,0,0,1,1,0,1,1),
-                group=c(0,1,0,1,0,1,0,1), rho=0, gamma=1, tau = NULL, s.tau=0, 
+                group=c(0,1,0,1,0,1,0,1), rho=0, gamma=1, tau = NULL, s.tau=0.5, 
                 f.ws=NULL, side = c("two.sided", "one.sided")) {
   
   u.eTime = unique(time[event==1]) #vector of unique event times

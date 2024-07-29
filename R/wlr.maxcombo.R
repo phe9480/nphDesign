@@ -1,4 +1,4 @@
-#' Stratified Max-combo Test At A Single Time Point
+#' Max-combo Test (Stratified) At A Single Time Point
 #' 
 #' Max-combo is a class of multiple combination tests. This function considers
 #' the maximum of multiple weighted log-rank tests, i.e. z_maxcombo = max(z1, z2, ..., zk),
@@ -6,14 +6,13 @@
 #' This function calculates the p-value and associated statistics when performing
 #' the max-combo test. The weight function wi can be the flexible Stabilized 
 #' Fleming-Harrington class sFH(rho, gamma, tau, s.tau), or any user-defined 
-#' weight function. Refer to wlr function for instructions how to set weight parameters. 
-#' For weighted logrank test with multiple analyses, use wlr.inference function.
+#' weight function. 
 #' 
 #' Refer to Karrinson (2016) for the method of max-combo when 
 #' it is defined based on FH(0, 0), FH(1, 0), FH(0, 1) and FH(1, 1). However, 
 #' this function extends the concept to include any type of weighted log-rank tests.
 #' The kth weighted log-rank test has parameters of (rho_k, gamma_k, tau_k, s.tau_k)
-#' defined in the stabilized Fleming-Harrington class or user-defined 
+#' defined in the stabilized Fleming-Harrington class (He et al 2021) or user-defined 
 #' weight function f.ws_k based on pooled survival curve, for k = 1, ..., K. 
 #' For the stabilized Fleming-Harrington class, specify either tau or s.tau, 
 #' which are thresholds in survival time and survival rate, respectively. In addition,
@@ -29,7 +28,7 @@
 #'       function defined as w(t) = s_tilda^rho*(1-s_tilda)^gamma, where
 #'       s_tilda = max(s(t), s.tau) or max(s(t), s(tau)) if s.tau = NULL
 #'       tau = Inf reduces to regular Fleming-Harrington test(rho, gamma)
-#' @param  s.tau  A vector of survival rate cuts S(tau) at t = tau; default 0.
+#' @param  s.tau  A vector of survival rate cuts S(tau) at t = tau; default 0.5, ie. cut at median.
 #'       s.tau = 0 reduces to regular Fleming-Harrington test(rho, gamma)
 #'       
 #' @param  f.ws  Self-defined weight functions of survival rate. 
@@ -134,7 +133,7 @@
 #' @export
 wlr.maxcombo = function(time=c(5,7,10,12,12,15,20,20), event=c(1,0,0,1,1,0,1,1),
     group=c(0,1,0,1,0,1,0,1), strata1=NULL, strata2=NULL, strata3=NULL, 
-    rho = c(0,0,0), gamma=c(0,0.5,1), tau = NULL, s.tau=c(0, 0, 0),
+    rho = c(0,0,0), gamma=c(0,0.5,1), tau = NULL, s.tau=c(0, 0, 0.5),
     f.ws=list(
       lr = function(s){return(1)}, 
       fh005=function(s){sqrt(1-s)},
